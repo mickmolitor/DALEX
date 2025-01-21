@@ -67,8 +67,11 @@ class SubgroupConfusionMatrixMetrics:
 
         for sub, cm in matrix_dict.items():
             tp, tn, fp, fn = cm.tp, cm.tn, cm.fp, cm.fn
+            y_true = sub_confusion_matrix.y_true[sub_confusion_matrix.protected == sub]
+            y_pred = sub_confusion_matrix.y_pred[sub_confusion_matrix.protected == sub]
 
-            TPR = TNR = PPV = NPV = FNR = FPR = FDR = FOR = ACC = STP = np.nan
+            # Compute standard confusion matrix metrics
+            TPR = FPR = PPV = NPV = FNR = TNR = FDR = FOR = ACC = STP = AUROC = np.nan
 
             if tp + fn > 0:
                 TPR = tp / (tp + fn)
@@ -86,20 +89,27 @@ class SubgroupConfusionMatrixMetrics:
                 ACC = (tp + tn) / (tp + tn + fp + fn)
                 STP = (tp + fp) / (tp + tn + fp + fn)
 
-            cf_metrics = {'TPR': TPR, 'TNR': TNR, 'PPV': PPV, 'NPV': NPV,
-                          'FNR': FNR, 'FPR': FPR, "FDR": FDR, 'FOR': FOR, 'ACC': ACC, 'STP': STP}
+            # Compute AUROC for this subgroup
+            if len(np.unique(y_true)) > 1:  # Ensure both classes are present
+                AUROC = roc_auc_score(y_true, y_pred)
 
+            # Compute Proportion of Favorable Outcomes for Disparate Impact
+            FPROP = sub_confusion_matrix.y_pred[sub_confusion_matrix.protected == sub].mean()
+
+            # Consolidate metrics
+            cf_metrics = {
+                'TPR': TPR, 'TNR': TNR, 'PPV': PPV, 'NPV': NPV,
+                'FNR': FNR, 'FPR': FPR, 'FDR': FDR, 'FOR': FOR,
+                'ACC': ACC, 'STP': STP, 'AUROC': AUROC,
+                'FPROP': FPROP
+            }
+
+            # Round and store
             for metric in cf_metrics.keys():
                 if not pd.isna(cf_metrics.get(metric)):
-                    cf_metrics[metric] = round(cf_metrics.get(metric), 3)
+                    cf_metrics[metric] = round(cf_metrics[metric], 3)
 
             subgroup_confusion_matrix_metrics[sub] = deepcopy(cf_metrics)
-        
-        y_true = sub_confusion_matrix.y_true
-        y_pred = sub_confusion_matrix.y_pred
-        protected = sub_confusion_matrix.protected
-
-        subgroup_confusion_matrix_metrics['AUROC_Gap'] = compute_auroc_gap(y_true, y_pred, protected)
 
         self.subgroup_confusion_matrix_metrics = subgroup_confusion_matrix_metrics
 
@@ -345,7 +355,7 @@ def calculate_regression_measures(y, y_hat, protected, privileged):
 
 # -------------- Helper functions --------------
 def fairness_check_metrics():
-    return ["TPR", "ACC", "PPV", "FPR", "STP", "AUROC_Gap"]
+    return ["TPR", "ACC", "PPV", "FPR", "STP", "AUROC", "FPROP"]
 
 
 def universal_fairness_check(self, epsilon, verbose, num_for_not_fair, num_for_no_decision, metrics):
@@ -424,32 +434,3 @@ def readable_number(tick_range, round_number):
             readable_tick = 10
 
     return readable_tick * np.power(10, exponent)
-
-def compute_auroc_gap(y_true, y_pred, protected):
-    """
-    Computes the AUROC gap between two subgroups.
-
-    Parameters:
-        y_true (array-like): True binary labels.
-        y_pred (array-like): Predicted probabilities or scores.
-        protected (array-like): Protected attribute for subgroup division.
-
-    Returns:
-        float: Absolute AUROC gap between the subgroups.
-    """
-    subgroups = np.unique(protected)
-    if len(subgroups) != 2:
-        raise ValueError("AUROC Gap requires exactly two subgroups.")
-
-    aurocs = {}
-    for subgroup in subgroups:
-        indices = np.where(protected == subgroup)
-        subgroup_y_true = y_true[indices]
-        subgroup_y_pred = y_pred[indices]
-        aurocs[subgroup] = roc_auc_score(subgroup_y_true, subgroup_y_pred)
-    
-    return abs(aurocs[subgroups[0]] - aurocs[subgroups[1]])
-
-
-
-
