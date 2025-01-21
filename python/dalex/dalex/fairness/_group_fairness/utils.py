@@ -2,6 +2,7 @@ from copy import deepcopy
 
 import numpy as np
 import pandas as pd
+from sklearn.metrics import roc_auc_score
 
 from . import checks
 from ... import _global_checks
@@ -40,7 +41,9 @@ class SubgroupConfusionMatrix:
 
             sub_dict[sub] = ConfusionMatrix(sub_y_true, sub_y_pred, cutoff.get(sub))
         self.sub_dict = sub_dict
-
+        self.y_true = y_true
+        self.y_pred = y_pred
+        self.protected = protected
 
 class SubgroupConfusionMatrixMetrics:
     """Calculate confusion matrix metrics for each subgroup
@@ -91,6 +94,12 @@ class SubgroupConfusionMatrixMetrics:
                     cf_metrics[metric] = round(cf_metrics.get(metric), 3)
 
             subgroup_confusion_matrix_metrics[sub] = deepcopy(cf_metrics)
+        
+        y_true = sub_confusion_matrix.y_true
+        y_pred = sub_confusion_matrix.y_pred
+        protected = sub_confusion_matrix.protected
+
+        subgroup_confusion_matrix_metrics['AUROC_Gap'] = compute_auroc_gap(y_true, y_pred, protected)
 
         self.subgroup_confusion_matrix_metrics = subgroup_confusion_matrix_metrics
 
@@ -240,7 +249,6 @@ def _classification_performance(fobject, verbose, type='accuracy'):
     else:
         raise TypeError(f'type \'{type}\' not supported')
 
-
 # -------------- Functions needed in creation and methods of GroupFairnessRegression object in object.py --------------
 
 class RegressionDict:
@@ -337,7 +345,7 @@ def calculate_regression_measures(y, y_hat, protected, privileged):
 
 # -------------- Helper functions --------------
 def fairness_check_metrics():
-    return ["TPR", "ACC", "PPV", "FPR", "STP"]
+    return ["TPR", "ACC", "PPV", "FPR", "STP", "AUROC_Gap"]
 
 
 def universal_fairness_check(self, epsilon, verbose, num_for_not_fair, num_for_no_decision, metrics):
@@ -417,7 +425,30 @@ def readable_number(tick_range, round_number):
 
     return readable_tick * np.power(10, exponent)
 
+def compute_auroc_gap(y_true, y_pred, protected):
+    """
+    Computes the AUROC gap between two subgroups.
 
+    Parameters:
+        y_true (array-like): True binary labels.
+        y_pred (array-like): Predicted probabilities or scores.
+        protected (array-like): Protected attribute for subgroup division.
+
+    Returns:
+        float: Absolute AUROC gap between the subgroups.
+    """
+    subgroups = np.unique(protected)
+    if len(subgroups) != 2:
+        raise ValueError("AUROC Gap requires exactly two subgroups.")
+
+    aurocs = {}
+    for subgroup in subgroups:
+        indices = np.where(protected == subgroup)
+        subgroup_y_true = y_true[indices]
+        subgroup_y_pred = y_pred[indices]
+        aurocs[subgroup] = roc_auc_score(subgroup_y_true, subgroup_y_pred)
+    
+    return abs(aurocs[subgroups[0]] - aurocs[subgroups[1]])
 
 
 
