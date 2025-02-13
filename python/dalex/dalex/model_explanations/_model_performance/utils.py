@@ -22,6 +22,10 @@ def r2(y_pred, y_true):
     return 1 - mse(y_pred, y_true) / mse(y_true.mean(), y_true)
 
 
+def mape(y_pred, y_true):
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+
 def auc(y_pred, y_true):
     _df = pd.DataFrame({'y_pred': y_pred, 'y_true': y_true})
     if _df.y_true.nunique() == 1:

@@ -77,6 +77,7 @@ class ModelPerformance(Explanation):
             _r2 = utils.r2(y_pred, y_true)
             _mae = utils.mae(y_pred, y_true)
             _mad = utils.mad(y_pred, y_true)
+            _mape = utils.mape(y_pred, y_true)
 
             self.result = pd.DataFrame(
                 {
@@ -84,7 +85,8 @@ class ModelPerformance(Explanation):
                     'rmse': [_rmse],
                     'r2': [_r2],
                     'mae': [_mae],
-                    'mad': [_mad]
+                    'mad': [_mad],
+                    'mape': [_mape]
                 }, index=[explainer.label])
         elif self.model_type == 'classification':
             tp = ((y_true == 1) * (y_pred >= self.cutoff)).sum()
