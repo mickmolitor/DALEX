@@ -54,6 +54,12 @@ def precision(tp, fp, tn, fn):
     return tp / (tp + fp)
 
 
+def specificity(tp, fp, tn, fn):
+    if tn + fp == 0:
+        return 0
+    return tn / (tn + fp)
+
+
 def f1(tp, fp, tn, fn):
     _recall = recall(tp, fp, tn, fn)
     _precision = precision(tp, fp, tn, fn)

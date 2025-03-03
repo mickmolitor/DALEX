@@ -96,6 +96,7 @@ class ModelPerformance(Explanation):
 
             _recall = utils.recall(tp, fp, tn, fn)
             _precision = utils.precision(tp, fp, tn, fn)
+            _specificity = utils.specificity(tp, fp, tn, fn)
             _f1 = utils.f1(tp, fp, tn, fn)
             _accuracy = utils.accuracy(tp, fp, tn, fn)
             _auc = utils.auc(y_pred, y_true)
@@ -103,6 +104,7 @@ class ModelPerformance(Explanation):
             self.result = pd.DataFrame({
                 'recall': [_recall],
                 'precision': [_precision],
+                'specificity': [_specificity],
                 'f1': [_f1],
                 'accuracy': [_accuracy],
                 'auc': [_auc]
