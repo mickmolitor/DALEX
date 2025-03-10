@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from sklearn.metrics import mean_absolute_percentage_error
 from . import plot, utils
 from ... import _theme, _global_checks
 from ..._explanation import Explanation
@@ -77,7 +78,7 @@ class ModelPerformance(Explanation):
             _r2 = utils.r2(y_pred, y_true)
             _mae = utils.mae(y_pred, y_true)
             _mad = utils.mad(y_pred, y_true)
-            _mape = utils.mape(y_pred, y_true)
+            _mape = mean_absolute_percentage_error(y_pred, y_true)
 
             self.result = pd.DataFrame(
                 {
