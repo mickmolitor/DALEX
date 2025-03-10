@@ -23,6 +23,7 @@ def r2(y_pred, y_true):
 
 
 def mape(y_pred, y_true):
+    y_true = np.where(y_true == 0, 1e-8, y_true)  # Replace zeros
     return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
 
 
